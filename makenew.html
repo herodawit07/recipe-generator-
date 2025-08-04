@@ -1,0 +1,148 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recipe Generator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>Recipe Generator</h1>
+  
+  <div style="display:flex;">
+   
+    <div style="width:50%; padding:10px; border:1px solid #ccc; border-radius:30px; margin-bottom:10px;">
+     <h2 >Ingredients</h2>
+     <input id="ingredient-input" placeholder="Enter ingredient..." style="width:90%; padding:10px; border:1px solid #ccc; border-radius:4px; margin-bottom:10px;" />
+      
+      
+      <div>
+        <button>Chicken</button><button>Eggs</button><button>Tomato</button>
+        <button>Pasta</button><button>Rice</button><button>Cheese</button>
+        <button>Potato</button><button>Onion</button><button>butter</button>
+      </div>
+      
+      
+      <div id="selected-ingredients" style="margin-bottom:10px;"></div>
+      
+      
+      <button id="generate-btn" style="width:90%; padding:10px; background:#2196F3;   border-radius:4px; ">Generate Recipes</button>
+    </div>
+
+    
+    <div style="width:50%; padding:10px; border:1px solid #ccc; border-radius:30px; margin-bottom:10px;">
+      <h2 >Nutrition</h2>
+      <canvas id="nutrition-chart" style="max-height:250px; width:100%;"></canvas>
+    </div>
+  </div>
+
+  
+  <div style="width:97%; padding:10px; border:1px solid #ccc; border-radius:30px; margin-bottom:10px;">
+    <h2>Suggested Recipes</h2>
+    <div id="recipes-container" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:20px;"></div>
+  </div>
+
+<script>
+    const API_KEY = 'f5a94f4c818046b5969c4797feb7148c'; 
+    const input = document.getElementById('ingredient-input');
+    const list = document.getElementById('selected-ingredients');
+    const generate = document.getElementById('generate-btn');
+    const recipes = document.getElementById('recipes-container');
+    const buttons = document.querySelectorAll('button:not(#generate-btn)');
+    let ingredients = [];
+
+    input.addEventListener('keypress', e => {
+      if (e.key === 'Enter' && input.value.trim()) {
+        add(input.value.trim().toLowerCase());
+        input.value = '';
+      }
+    });
+
+    
+    buttons.forEach(btn => btn.onclick = () => add(btn.textContent.toLowerCase()));
+
+    function add(item) {
+      if (!ingredients.includes(item)) {
+        ingredients.push(item);
+        showIngredients();
+        updateChart();
+      }
+    }
+
+    function remove(item) {
+      ingredients = ingredients.filter(i => i !== item);
+      showIngredients();
+      updateChart();
+    }
+
+    function showIngredients() {
+      list.innerHTML = '';
+      ingredients.forEach(i => {
+        const chip = document.createElement('span');
+        chip.style = 'background:#eee; padding:5px 10px; border-radius:20px; margin:3px; display:inline-block;';
+        chip.textContent = i;
+        const x = document.createElement('span');
+        x.textContent = ' ×';
+        x.style = 'cursor:pointer; color:#888; margin-left:6px;';
+        x.onclick = () => remove(i);
+        chip.appendChild(x);
+        list.appendChild(chip);
+      });
+    }
+
+    
+    const chart = new Chart(document.getElementById('nutrition-chart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Carbs', 'Protein', 'Fat'],
+        datasets: [{ data: [0, 0, 0], backgroundColor: ['#ff6b6b', '#4CAF50', '#2196F3'] }]
+      },
+      
+    });
+
+
+    function updateChart() {
+      chart.data.datasets[0].data = ingredients.length
+         ? [Math.random() * 100, Math.random() * 100, Math.random() * 100]
+         : [0, 0, 0];
+      chart.update();
+    }
+
+    
+    generate.onclick = async () => {
+
+      
+       if (!ingredients.length) {
+          recipes.innerHTML = '<p>Add ingredients first.</p>';
+          return;
+        }
+
+      recipes.innerHTML = '<p>Loading...</p>';
+
+        try {
+        const res = await fetch(`https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredients.join(',')}&number=6&apiKey=${API_KEY}`);
+        const data = await res.json();
+
+        recipes.innerHTML = data.length ? '' : '<p>No recipes found.</p>';
+??
+::::""""""""""""""""""""""""""
+        data.forEach(recipe => {
+          const link = `https://spoonacular.com/recipes/${recipe.title.replace(/ /g, '-').toLowerCase()}-${recipe.id}`;
+
+          recipes.innerHTML += `
+            <div style="background:#fff;padding:10px;border-radius:8px;box-shadow:0 2px 4px #0002">
+              <h3>${recipe.title}</h3>
+              <img src="${recipe.image}" style="width:100%;border-radius:6px;margin:0 0 10px">
+              <p><b>Used:</b> ${recipe.usedIngredientCount} | <b>Missing:</b> ${recipe.missedIngredientCount}</p>
+              <a href="${link}" target="_blank">View Recipe</a>
+            </div>
+          `;
+        });
+
+      } catch {
+        recipes.innerHTML = '<p>Error fetching recipes.</p>';
+      }
+    };  
+</script>
+
+</body>
+</html>
